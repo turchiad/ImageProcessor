@@ -65,6 +65,11 @@ def parseBytes(b):
 	else:
 		return b
 
+def isBitmapImage(filename):
+	if filename[-4:].lower() == ".bmp":
+		return True
+	else:
+		return False
 
 def parseBMPHeader(h):
 	# 2 bytes
@@ -104,16 +109,36 @@ def parseDIBHeader(h):
 
 def parseColorPallet(h):
 	#Left blank for now
+	return 0
 
 def parseBMPContent(h):
 	#Remainder of the data stored as pixels
 	bmpContent = h
 
 def readBMP(filename):
-	try:
-		f = open(filename,'rb')	
-	except:
-		sys.stderr.write("Attempted to access a file which does not exist.")
 
-	data = f.read()	
+	#Check if this file is a bitmap image
+
+	if not isBitmapImage(filename):
+		sys.stderr.write("Attempted to read from a file which is not a BMP. Aborting.")
+		return
+
+	#Attempt to open file
+
+	try:
+		f = open(filename,'rb')
+	except:
+		sys.stderr.write("Attempted to access a file which does not exist. Aborting.")
+
+	#Read contents of BMP
+
+	data = f.read()
+
+	#Partition Data Step 1
+
+	BMPHeader = data[0:BMPHEADER_SIZE-1]
+	DIBHeader = data[BMPHEADER_SIZE:BMPHEADER_SIZE+DIBHEADER_SIZE-1]
+	
+	parseBMPHeader(BMPHeader)
+
 
