@@ -1,5 +1,7 @@
 # Started 2020-07-11 at 4:13 P.M. by D.T.
 
+import sys
+
 # NOTE: Bitmaps are stored Little-Endian
 
 # The Structure of a Bitmap File
@@ -23,6 +25,11 @@
 ### ImportantColors - 4 bytes
 ## Color Pallet - Variable/Optional
 ## BMP Content - Variable
+
+# Define Globals
+
+BMPHEADER_SIZE = 14 #bytes
+DIBHEADER_SIZE = 40 #bytes
 
 # Define Variables
 
@@ -51,6 +58,13 @@ colorPallet = None
 
 ## BMP Content Vars
 bmpContent = None
+
+def parseBytes(b):
+	if len(b) > 1:
+		return b
+	else:
+		return b
+
 
 def parseBMPHeader(h):
 	# 2 bytes
@@ -94,3 +108,12 @@ def parseColorPallet(h):
 def parseBMPContent(h):
 	#Remainder of the data stored as pixels
 	bmpContent = h
+
+def readBMP(filename):
+	try:
+		f = open(filename,'rb')	
+	except:
+		sys.stderr.write("Attempted to access a file which does not exist.")
+
+	data = f.read()	
+
