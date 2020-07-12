@@ -1,4 +1,5 @@
 # Started 2020-07-11 at 4:13 P.M. by D.T.
+# https://itnext.io/bits-to-bitmaps-a-simple-walkthrough-of-bmp-image-format-765dc6857393 is used as a reference for the structure of a Bitmap
 
 import sys
 
@@ -26,10 +27,20 @@ import sys
 ## Color Pallet - Variable/Optional
 ## BMP Content - Variable
 
+# If BitsPerPixel <= 8, then Color Pallet is mandatory
+## TotalColors is the number of colors defined in the Pallet
+## Each color shall be 4 bytes
+### 3 bytes for RGB color-channels
+### 4th byte reserved as 0
+## Total size shall be 4 x TotalColors bytes
+# If BitsPerPixel > 8, the Color Pallet is unused
+## TotalColors should be set to 0
+
 # Define Globals
 
 BMPHEADER_SIZE = 14 #bytes
 DIBHEADER_SIZE = 40 #bytes
+COLORPALLET_SIZE = 0 #bytes, to be defined later
 
 # Define Variables
 
@@ -129,6 +140,7 @@ def readBMP(filename):
 		f = open(filename,'rb')
 	except:
 		sys.stderr.write("Attempted to access a file which does not exist. Aborting.")
+		return
 
 	#Read contents of BMP
 
@@ -139,6 +151,17 @@ def readBMP(filename):
 	BMPHeader = data[0:BMPHEADER_SIZE-1]
 	DIBHeader = data[BMPHEADER_SIZE:BMPHEADER_SIZE+DIBHEADER_SIZE-1]
 	
-	parseBMPHeader(BMPHeader)
+	#Parse Partitioned Data Step 1
 
+	parseBMPHeader(BMPHeader)
+	parseDIBHeader(DIBHeader)
+
+	#Contingent on the DIB Header being parsed correctly
+	if bitsPerPixel > 8 and totalColors == 0:
+		COLORPALLET_SIZE = 0
+	elif bitsPerPixel <= 8 and totalColors == 0:
+		sys.stderr.write("BitsPerPixel <= 8 and TotalColors > 0 resulting in an inconsistency. Aborting.")
+		return
+	else:
+		COLORPALLET_SIZE = 4 * totalColors
 
