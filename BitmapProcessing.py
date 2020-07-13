@@ -71,10 +71,7 @@ colorPallet = None
 bmpContent = None
 
 def parseBytes(b):
-	if len(b) > 1:
-		return b
-	else:
-		return b
+	return int.from_bytes(b,'little')
 
 def isBitmapImage(filename):
 	if filename[-4:].lower() == ".bmp":
@@ -84,43 +81,51 @@ def isBitmapImage(filename):
 
 def parseBMPHeader(h):
 	# 2 bytes
-	fileType = h[0:1]
+	fileType = parseBytes(h[0:1])
 	# 4 bytes
-	fileSize = h[2:5]
+	fileSize = parseBytes(h[2:5])
 	# 2 bytes
-	res1 = h[6:7]
+	res1 = parseBytes(h[6:7])
 	# 2 bytes
-	res2 = h[8:9]
+	res2 = parseBytes(h[8:9])
 	# 4 bytes
-	pixelDataOffset = h[10:13]
+	pixelDataOffset = parseBytes(h[10:13])
 
 def parseDIBHeader(h):
 	# 4 bytes
-	headerSize = h[0:3]
+	headerSize = parseBytes(h[0:3])
 	# 4 bytes
-	imageWidth = h[4:7]
+	imageWidth = parseBytes(h[4:7])
 	# 4 bytes
-	imageHeight = h[8:11]
+	imageHeight = parseBytes(h[8:11])
 	# 2 bytes
-	colorPlanes = h[12:13]
+	colorPlanes = parseBytes(h[12:13])
 	# 2 bytes
-	bitsPerPixel = h[14:15]
+	bitsPerPixel = parseBytes(h[14:15])
 	# 4 bytes
-	compression = h[16:19]
+	compression = parseBytes(h[16:19])
 	# 4 bytes
-	imageSize = h[20:23]
+	imageSize = parseBytes(h[20:23])
 	# 4 bytes
-	xPixelsPerMeter = h[24:27]
+	xPixelsPerMeter = parseBytes(h[24:27])
 	# 4 bytes
-	yPixelsPerMeter = h[28:31]
+	yPixelsPerMeter = parseBytes(h[28:31])
 	# 4 bytes
-	totalColors = h[32:35]
+	totalColors = parseBytes(h[32:35])
 	# 4 bytes
-	importantColors = h[36:39]
+	importantColors = parseBytes(h[36:39])
 
 def parseColorPallet(h):
-	#Left blank for now
-	return 0
+	#Number of Rows/Colors in the Pallet
+	numRows= len(h)/4
+
+	#Initialize empty array
+	colorPallet = [[None for i in range(4)] for j in range(numRows)]
+
+	for j in range(numRows):
+		for i in range(4):
+			colorPallet[i][j] = parseBytes(h[j*4+i])
+
 
 def parseBMPContent(h):
 	#Remainder of the data stored as pixels
@@ -157,11 +162,25 @@ def readBMP(filename):
 	parseDIBHeader(DIBHeader)
 
 	#Contingent on the DIB Header being parsed correctly
+
+	#If BitsPerPixel is more than 8 (and therefore totalColors = 0)
 	if bitsPerPixel > 8 and totalColors == 0:
 		COLORPALLET_SIZE = 0
+	#If BitsPerPixel is less than or equal to 8, but totalColors is still 0 (should not happen)
 	elif bitsPerPixel <= 8 and totalColors == 0:
 		sys.stderr.write("BitsPerPixel <= 8 and TotalColors > 0 resulting in an inconsistency. Aborting.")
 		return
+	#If BitsPerPixel is less than or equal to 8 (and therefore totalColors > 0)
 	else:
 		COLORPALLET_SIZE = 4 * totalColors
+
+	#Partition Data Step 2
+
+	ColorPallet = data[BMPHEADER_SIZE+DIBHEADER_SIZE:BMPHEADER_SIZE+DIBHEADER_SIZE+COLORPALLET_SIZE-1]
+	BMPContent = data[BMPHEADER_SIZE+DIBHEADER_SIZE+COLORPALLET_SIZE:]
+
+	#Parse Partitioned Data Step 2
+
+	parseColorPallet(ColorPallet)
+	parseBMPContent(BMPContent)
 
