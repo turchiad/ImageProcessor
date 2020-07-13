@@ -1,2 +1,5 @@
 # Exclude any bitmap files
 *.BMP
+
+# Exlude Python compilation & debugging caches
+__**__
