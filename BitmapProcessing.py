@@ -135,6 +135,7 @@ def parseBMPContent(h):
 	## BytesPerPixel = BitsPerPixel / 4
 	## HorizontalLength = ImageWidth * BytesPerPixel
 	## VerticalLength = ImageHeight * BytesPerPixel
+	## There must be a pixel data structure to hand each pixel.
 
 def readBMP(filename):
 
