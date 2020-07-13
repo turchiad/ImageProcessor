@@ -64,7 +64,7 @@ yPixelsPerMeter = None
 totalColors = None
 importantColors = None
 
-## Color Pallet Vars
+## Color Pallet Array
 colorPallet = None
 
 ## BMP Content Vars
@@ -130,6 +130,11 @@ def parseColorPallet(h):
 def parseBMPContent(h):
 	#Remainder of the data stored as pixels
 	bmpContent = h
+
+	#Data shall be organized as follows:
+	## BytesPerPixel = BitsPerPixel / 4
+	## HorizontalLength = ImageWidth * BytesPerPixel
+	## VerticalLength = ImageHeight * BytesPerPixel
 
 def readBMP(filename):
 
