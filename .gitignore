@@ -1,4 +1,5 @@
 # Exclude any bitmap files
+*.bmp
 *.BMP
 
 # Exlude Python compilation & debugging caches
