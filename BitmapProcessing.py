@@ -70,6 +70,11 @@ colorPallet = None
 ## BMP Content Vars
 bmpContent = None
 
+# Define Help String
+
+helpString = """usage: python /path/to/BitmapProcessing.py [options] [filename]
+	-?: Show usage for this script"""
+
 def parseBytes(b):
 	return int.from_bytes(b,'little')
 
@@ -142,7 +147,7 @@ def readBMP(filename):
 	#Check if this file is a bitmap image
 
 	if not isBitmapImage(filename):
-		sys.stderr.write("Attempted to read from a file which is not a BMP. Aborting.")
+		sys.stderr.write("Attempted to read from a file which is not a BMP. Aborting.\n")
 		return
 
 	#Attempt to open file
@@ -150,7 +155,7 @@ def readBMP(filename):
 	try:
 		f = open(filename,'rb')
 	except:
-		sys.stderr.write("Attempted to access a file which does not exist. Aborting.")
+		sys.stderr.write("Attempted to access a file which does not exist. Aborting.\n")
 		return
 
 	#Read contents of BMP
@@ -174,7 +179,7 @@ def readBMP(filename):
 		COLORPALLET_SIZE = 0
 	#If BitsPerPixel is less than or equal to 8, but totalColors is still 0 (should not happen)
 	elif bitsPerPixel <= 8 and totalColors == 0:
-		sys.stderr.write("BitsPerPixel <= 8 and TotalColors > 0 resulting in an inconsistency. Aborting.")
+		sys.stderr.write("BitsPerPixel <= 8 and TotalColors > 0 resulting in an inconsistency. Aborting.\n")
 		return
 	#If BitsPerPixel is less than or equal to 8 (and therefore totalColors > 0)
 	else:
@@ -189,4 +194,25 @@ def readBMP(filename):
 
 	parseColorPallet(ColorPallet)
 	parseBMPContent(BMPContent)
+
+
+# Main Runtime
+
+# In case this script is called without arguments
+if len(sys.argv) <= 1:
+	sys.stderr.write("Please refer to instructions for how to run this script. Type:\n\npython BitmapProcessing.py -?\n\n")
+	sys.exit()
+# In case the user requests instructions
+elif "-?" in sys.argv:
+	print(helpString)
+	sys.exit()
+# In case neither of these overrides happen
+else:
+	# In case the user has provided multiple filenames. Exactly one is required.
+	if len(list(x for x in sys.argv if not x.startswith("-"))) > 2:
+		sys.stderr.write("Multiple filenames have been provided. Please provide exactly one non-option argument. See -? for help.\n")
+		sys.exit()
+	# In case the user has not provided a filename. Exactly one is require
+	elif len(list(x for x in sys.argv if not x.startswith("-"))) <= 1:
+		sys.stderr.write("No filenames have been provided. Please provide exactly one non-option argument. See -? for help.\n")
 
