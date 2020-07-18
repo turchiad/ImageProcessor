@@ -49,7 +49,7 @@ fileType = None
 fileSize = None
 res1 = None
 res2 = None
-PixelDataOffset = None
+pixelDataOffset = None
 
 ## DIB Header Vars
 headerSize = None
@@ -75,6 +75,35 @@ bmpContent = None
 helpString = """usage: python /path/to/BitmapProcessing.py [options] [filename]
 	-?: Show usage for this script"""
 
+# Define option checks
+debugCheck = 0
+
+# The purpose of printDebug() is to provide an overview of the script's state
+def printDebug():
+
+	#BMP Header Vars
+	print("BMP Header Data:")
+	print("File Type: " + str(fileType))
+	print("File Size: " + str(fileSize))
+	print("Reserved Byte #1: " + str(res1))
+	print("Reserved Byte #2: " + str(res2))
+	print("PixelDataOffset: " + str(pixelDataOffset))
+
+	#DIB Header vars
+	print("\nDIB Header Data:")
+	print("Header Size: " + str(headerSize))
+	print("Image Width: " + str(imageWidth))
+	print("Image Height: " + str(imageHeight))
+	print("Color Planes: " + str(colorPlanes))
+	print("Bites Per Pixel: " + str(bitsPerPixel))
+	print("Compression: " + str(compression))
+	print("Image Size: " + str(imageSize))
+	print("X-Pixels Per Meter: " + str(xPixelsPerMeter))
+	print("Y-Pixels Per Meter: " + str(yPixelsPerMeter))
+	print("Total Colors: " + str(totalColors))
+	print("Important Colors: " + str(importantColors))
+
+
 def parseBytes(b):
 	return int.from_bytes(b,'little')
 
@@ -85,6 +114,10 @@ def isBitmapImage(filename):
 		return False
 
 def parseBMPHeader(h):
+
+	# Define globals
+	global fileType, fileSize, res1, res2, pixelDataOffset
+
 	# 2 bytes
 	fileType = parseBytes(h[0:1])
 	# 4 bytes
@@ -97,6 +130,12 @@ def parseBMPHeader(h):
 	pixelDataOffset = parseBytes(h[10:13])
 
 def parseDIBHeader(h):
+
+	# Define globals
+
+	global headerSize, imageWidth, imageHeight, colorPlanes, bitsPerPixel, \
+	compression, imageSize, xPixelsPerMeter, yPixelsPerMeter, totalColors, importantColors
+
 	# 4 bytes
 	headerSize = parseBytes(h[0:3])
 	# 4 bytes
@@ -172,6 +211,8 @@ def readBMP(filename):
 	parseBMPHeader(BMPHeader)
 	parseDIBHeader(DIBHeader)
 
+	return
+
 	#Contingent on the DIB Header being parsed correctly
 
 	#If BitsPerPixel is more than 8 (and therefore totalColors = 0)
@@ -198,21 +239,46 @@ def readBMP(filename):
 
 # Main Runtime
 
-# In case this script is called without arguments
+## In case this script is called without arguments
 if len(sys.argv) <= 1:
 	sys.stderr.write("Please refer to instructions for how to run this script. Type:\n\npython BitmapProcessing.py -?\n\n")
 	sys.exit()
-# In case the user requests instructions
+## In case the user requests instructions
+### This must be located here because it is the only option which requries no filename
 elif "-?" in sys.argv:
 	print(helpString)
 	sys.exit()
-# In case neither of these overrides happen
-else:
-	# In case the user has provided multiple filenames. Exactly one is required.
-	if len(list(x for x in sys.argv if not x.startswith("-"))) > 2:
-		sys.stderr.write("Multiple filenames have been provided. Please provide exactly one non-option argument. See -? for help.\n")
-		sys.exit()
-	# In case the user has not provided a filename. Exactly one is require
-	elif len(list(x for x in sys.argv if not x.startswith("-"))) <= 1:
-		sys.stderr.write("No filenames have been provided. Please provide exactly one non-option argument. See -? for help.\n")
+## In case the user has provided multiple filenames. Exactly one is required.
+elif len(list(x for x in sys.argv if not x.startswith("-"))) > 2:
+	sys.stderr.write("Multiple filenames have been provided. Please provide exactly one non-option argument. See -? for help.\n")
+	sys.exit()
+## In case the user has not provided a filename. Exactly one is require
+elif len(list(x for x in sys.argv if not x.startswith("-"))) <= 1:
+	sys.stderr.write("No filenames have been provided. Please provide exactly one non-option argument. See -? for help.\n")
+	sys.exit()
+
+# If no override states have been encountered proceed with runtime
+
+## Option Handling
+
+# If -debug is on, then provide extra print statements wherever necessary
+if "-debug" in sys.argv:
+	debugCheck = 1
+
+
+# The filename shall be the second non-option element of the arguments
+filename = list((x for x in sys.argv if not x.startswith("-")))[1]
+
+
+if debugCheck:
+	print("\n--INITIAL PARAMETERS PRINT--\n")
+	printDebug()
+
+readBMP(filename)
+
+if debugCheck:
+	print("\n--POST READ PRINT--\n")
+	printDebug()
+
+
 
