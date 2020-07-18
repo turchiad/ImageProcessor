@@ -103,6 +103,38 @@ def printDebug():
 	print("Total Colors: " + str(totalColors))
 	print("Important Colors: " + str(importantColors))
 
+	#Color Pallet vars
+	print("\nColor Pallet Data:")
+	if colorPallet == None:
+		print("The Color Pallet has not been evaluated.")
+	#Short circuiting will ensure this does not run on None
+	elif len(colorPallet) == 0:
+		print("The Color Pallet is not used.")
+	else:
+
+		#Color Pallet Rows
+		cpRows = len(colorPallet)
+		#Color Pallet Cols
+		cpCols = len(colorPallet[0])
+
+		#Print the 2D Array
+		print("The Color Pallet has " + str(cpRows) + " rows")
+		for i in range(cpRows):
+			print("Row " + str(i) + ": ",end="")
+			for j in range(cpCols):
+				print(str(colorPallet[i][j]),end="")
+				if j < cpCols-1:
+					print(",",end="")
+			print()
+
+	#bmpContent vars
+	print("\nBMP Content/Pixel Data:")
+	if bmpContent == None:
+		print("BMP Content has not yet been evaluated.")
+	else:
+		print("BMP Content has been loaded with " + str(len(bmpContent)) + " bytes.")
+
+
 
 def parseBytes(b):
 	return int.from_bytes(b,'little')
@@ -160,8 +192,17 @@ def parseDIBHeader(h):
 	importantColors = parseBytes(h[36:39])
 
 def parseColorPallet(h):
+
+	#Define Globals
+	global colorPallet
+
 	#Number of Rows/Colors in the Pallet
-	numRows= len(h)/4
+	numRows= int(len(h)/4)
+
+	#Print numRows if debug is checked.
+	if debugCheck:
+		print("\n--FROM parseColorPallet()--")
+		print("Number of Color Pallet Rows: " + str(numRows) + "\n")
 
 	#Initialize empty array
 	colorPallet = [[None for i in range(4)] for j in range(numRows)]
@@ -171,7 +212,21 @@ def parseColorPallet(h):
 			colorPallet[i][j] = parseBytes(h[j*4+i])
 
 
+	#Print the 2D size of colorPallet if debug is checked.
+	if debugCheck:
+		print("\n--FROM parseColorPallet()--")
+		ySize = len(colorPallet)
+		if ySize > 0:
+			xSize = len(colorPallet[0])
+			print("colorPallet is: [" + str(xSize) + " x " + str(ySize) + "]\n")
+		else:
+			print("colorPallet is: [0 x 0]\n")
+
 def parseBMPContent(h):
+
+	#Define Globals
+	global bmpContent
+
 	#Remainder of the data stored as pixels
 	bmpContent = h
 
@@ -211,9 +266,10 @@ def readBMP(filename):
 	parseBMPHeader(BMPHeader)
 	parseDIBHeader(DIBHeader)
 
-	return
-
 	#Contingent on the DIB Header being parsed correctly
+
+	# Must define COLORPALLET_SIZE as a global because it is evaluated here.
+	global COLORPALLET_SIZE
 
 	#If BitsPerPixel is more than 8 (and therefore totalColors = 0)
 	if bitsPerPixel > 8 and totalColors == 0:
@@ -221,10 +277,16 @@ def readBMP(filename):
 	#If BitsPerPixel is less than or equal to 8, but totalColors is still 0 (should not happen)
 	elif bitsPerPixel <= 8 and totalColors == 0:
 		sys.stderr.write("BitsPerPixel <= 8 and TotalColors > 0 resulting in an inconsistency. Aborting.\n")
+		sys.exit()
 		return
 	#If BitsPerPixel is less than or equal to 8 (and therefore totalColors > 0)
 	else:
 		COLORPALLET_SIZE = 4 * totalColors
+
+
+	# Quality Check
+	if BMPHEADER_SIZE + DIBHEADER_SIZE + COLORPALLET_SIZE != pixelDataOffset:
+		sys.stderr.write("WARNING: pixelDataOffset does not match ColorPallet information. This BMP file has not been properly constructed.\n")
 
 	#Partition Data Step 2
 
