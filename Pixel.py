@@ -29,5 +29,12 @@ class BMPPixel(Pixel):
 
 	# Class Variables
 
-	def __init__(self, R, G, B):
-		super().__init__(R, G, B)
+	## A Dictionary which infers the size of R,G, and B from the size of Raw
+	### 8 bits is to be handled separately
+	### 16 bits -> 5 bits
+	### 24 bits -> 8 bits
+	### 32 bits -> 10 bits
+	### 64 bits -> 21 bits
+	sizeDict = {8:2,}
+
+	def __init__(self, raw):
