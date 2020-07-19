@@ -69,6 +69,7 @@ colorPallet = None
 
 ## BMP Content Vars
 bmpContent = None
+pixelData = None
 
 # Define Help String
 
@@ -137,7 +138,13 @@ def printDebug():
 
 
 def parseBytes(b):
-	return int.from_bytes(b,'little')
+	if isinstance(b,int):
+		return b
+	elif not isinstance(b, bytes):
+		sys.stderr.write("Attempted to process non-byte data into integers. Aborting.\n")
+		sys.exit()
+	else:
+		return int.from_bytes(b,'little')
 
 def isBitmapImage(filename):
 	if filename[-4:].lower() == ".bmp":
@@ -207,9 +214,12 @@ def parseColorPallet(h):
 	#Initialize empty array
 	colorPallet = [[None for i in range(4)] for j in range(numRows)]
 
+	counter = 0
+
 	for j in range(numRows):
 		for i in range(4):
-			colorPallet[i][j] = parseBytes(h[j*4+i])
+			colorPallet[i][j] = h[counter]
+			counter += 1
 
 
 	#Print the 2D size of colorPallet if debug is checked.
@@ -225,16 +235,27 @@ def parseColorPallet(h):
 def parseBMPContent(h):
 
 	#Define Globals
-	global bmpContent
+	global bmpContent, pixelData
 
 	#Remainder of the data stored as pixels
 	bmpContent = h
 
+	#Initialize pixelData as a [Height][Width][Pixel] array
+	#Currently this only functions for 24-bit color depth.
+	#I will have to implement a 'pixel' object to complete this properly.
+
+	pixelSize = int(bitsPerPixel/8)
+
+	pixelData = [[[None]*pixelSize]*imageWidth]*imageHeight
+
 	#Data shall be organized as follows:
-	## BytesPerPixel = BitsPerPixel / 4
-	## HorizontalLength = ImageWidth * BytesPerPixel
-	## VerticalLength = ImageHeight * BytesPerPixel
-	## There must be a pixel data structure to hand each pixel.
+
+	counter = 0
+
+	for i in range(imageHeight):
+		for j in range(imageWidth):
+			for k in range(pixelSize):
+				pixelData[i][j][k] = bmpContent[counter]
 
 def readBMP(filename):
 
