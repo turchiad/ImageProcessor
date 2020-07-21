@@ -5,7 +5,7 @@ import sys
 
 # NOTE: Bitmaps are stored Little-Endian
 
-# The Structure of a Bitmap File
+# T he Structure of a Bitmap File
 ## BMP Header - 14 bytes
 ### Filetype - 2 bytes
 ### Filesize - 4 bytes
@@ -137,7 +137,7 @@ def printDebug():
 	else:
 		print("BMP Content has been loaded with " + str(len(bmpContent)) + " bytes.")
 
-
+# Input Processing Functions
 
 def parseBytes(b):
 	if isinstance(b,int):
@@ -265,7 +265,7 @@ def readBMP(inputFilename):
 
 	if not isBitmapImage(inputFilename):
 		sys.stderr.write("Attempted to read from a file which is not a BMP. Aborting.\n")
-		return
+		sys.exit()
 
 	#Attempt to open file
 
@@ -273,7 +273,7 @@ def readBMP(inputFilename):
 		f = open(inputFilename,'rb')
 	except:
 		sys.stderr.write("Attempted to access a file which does not exist. Aborting.\n")
-		return
+		sys.exit()
 
 	#Read contents of BMP
 
@@ -322,6 +322,37 @@ def readBMP(inputFilename):
 	parseBMPContent(BMPContent)
 
 
+# Output Processing Functions
+
+def printBMP(outputFilename):
+
+	#Check if this file is a bitmap image
+
+	if not isBitmapImage(outputFilename):
+		sys.stderr.write("WARNING: Printing to a file without a .bmp extension.\n")
+
+	#Attempt to open file
+
+	try:
+		f = open(outputFilename,'wb')
+	except:
+		sys.stderr.write("Error when opening file to write to. Aborting.\n")
+		sys.exit()
+
+	#Initialize the string we will be constructing to print to the output file.
+
+	outputString = ""
+
+	#outputString += printBMPHeader()
+	#outputString += printDIBHeader()
+	#outputString += printColorPallet()
+	#outputString += printBMPContent()
+
+	#Print to output file
+	f.write(outputString)
+	f.close()
+
+
 # Main Runtime
 
 ## In case this script is called without arguments
@@ -366,7 +397,7 @@ elif len(outputTag) == 0:
 		sys.stderr.write("-o output option has not been configured properly. See -? for help.\n")
 		sys.exit()
 	outputFilename = outputTag[outputTag.index("=")+1:]
-	elif len(outputFilename) == 0:
+	if len(outputFilename) == 0:
 		sys.stderr.write("-o output option has not been configured properly. See -? for help.\n")
 		sys.exit()
 
@@ -384,7 +415,15 @@ if debugCheck:
 	print("\n--POST READ PRINT--\n")
 	printDebug()
 
-#printBMP()
+###
+###
+# ANY PROCESSING TO BE DONE PER THE OPTIONS TAGS
+###
+###
+
+# Conditional on -o
+if outputCheck:
+	printBMP(outputFilename)
 
 
 
