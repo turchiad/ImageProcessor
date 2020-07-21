@@ -73,8 +73,10 @@ pixelData = None
 
 # Define Help String
 
-helpString = """usage: python /path/to/BitmapProcessing.py [options] [filename]
-	-?: Show usage for this script"""
+helpString = """usage: python /path/to/BitmapProcessing.py [options] [inputFilename]
+	-?: Show usage for this script
+	-debug: Provide verbose debugging info during runtime
+	-o=[filename]: Output the file read to the inputFilename provided here"""
 
 # Define option checks
 debugCheck = 0
@@ -257,18 +259,18 @@ def parseBMPContent(h):
 			for k in range(pixelSize):
 				pixelData[i][j][k] = bmpContent[counter]
 
-def readBMP(filename):
+def readBMP(inputFilename):
 
 	#Check if this file is a bitmap image
 
-	if not isBitmapImage(filename):
+	if not isBitmapImage(inputFilename):
 		sys.stderr.write("Attempted to read from a file which is not a BMP. Aborting.\n")
 		return
 
 	#Attempt to open file
 
 	try:
-		f = open(filename,'rb')
+		f = open(inputFilename,'rb')
 	except:
 		sys.stderr.write("Attempted to access a file which does not exist. Aborting.\n")
 		return
@@ -327,7 +329,7 @@ if len(sys.argv) <= 1:
 	sys.stderr.write("Please refer to instructions for how to run this script. Type:\n\npython BitmapProcessing.py -?\n\n")
 	sys.exit()
 ## In case the user requests instructions
-### This must be located here because it is the only option which requries no filename
+### This must be located here because it is the only option which requries no inputFilename
 elif "-?" in sys.argv:
 	print(helpString)
 	sys.exit()
@@ -335,7 +337,7 @@ elif "-?" in sys.argv:
 elif len(list(x for x in sys.argv if not x.startswith("-"))) > 2:
 	sys.stderr.write("Multiple filenames have been provided. Please provide exactly one non-option argument. See -? for help.\n")
 	sys.exit()
-## In case the user has not provided a filename. Exactly one is require
+## In case the user has not provided a inputFilename. Exactly one is require
 elif len(list(x for x in sys.argv if not x.startswith("-"))) <= 1:
 	sys.stderr.write("No filenames have been provided. Please provide exactly one non-option argument. See -? for help.\n")
 	sys.exit()
@@ -348,20 +350,41 @@ elif len(list(x for x in sys.argv if not x.startswith("-"))) <= 1:
 if "-debug" in sys.argv:
 	debugCheck = 1
 
+# Handling output tags
+outputTag = [x for x in sys.argv if x.startswith("-o")]
+# If -o is provided twice
+if len(outputTag) > 1:
+	sys.stderr.write("Multiple filenames have been provided for the output tag -o. Please provide only one -o option.\n")
+	sys.exit()
+# If -o is provided correctly
+elif len(outputTag) == 0:
+	outputCheck = 1
+	# Isolate -o option
+	outputTag = outputTag[0]
+	# Check if -o option is configured properly
+	if "=" not in outputTag:
+		sys.stderr.write("-o output option has not been configured properly. See -? for help.\n")
+		sys.exit()
+	outputFilename = outputTag[outputTag.index("=")+1:]
+	elif len(outputFilename) == 0:
+		sys.stderr.write("-o output option has not been configured properly. See -? for help.\n")
+		sys.exit()
 
-# The filename shall be the second non-option element of the arguments
-filename = list((x for x in sys.argv if not x.startswith("-")))[1]
+# The inputFilename shall be the second non-option element of the arguments
+inputFilename = [(x for x in sys.argv if not x.startswith("-"))][1]
 
 
 if debugCheck:
 	print("\n--INITIAL PARAMETERS PRINT--\n")
 	printDebug()
 
-readBMP(filename)
+readBMP(inputFilename)
 
 if debugCheck:
 	print("\n--POST READ PRINT--\n")
 	printDebug()
+
+#printBMP()
 
 
 
