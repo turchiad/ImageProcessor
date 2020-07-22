@@ -80,6 +80,7 @@ helpString = """usage: python /path/to/BitmapProcessing.py [options] [inputFilen
 
 # Define option checks
 debugCheck = 0
+outputCheck = 0
 
 # The purpose of printDebug() is to provide an overview of the script's state
 def printDebug():
@@ -324,6 +325,67 @@ def readBMP(inputFilename):
 
 # Output Processing Functions
 
+def printBMPHeader():
+
+	# 2 bytes
+	b = fileType.to_bytes(2,'little')
+
+	# 6 bytes
+	b += fileSize.to_bytes(4,'little')
+
+	# 8 bytes
+	b += res1.to_bytes(2,'little')
+
+	# 10 bytes
+	b += res2.to_bytes(2,'little')
+
+	# 14 bytes
+	b += pixelDataOffset.to_bytes(4,'little')
+
+	return b
+
+
+def printDIBHeader():
+
+	# 4 bytes
+	b = headerSize.to_bytes(4,'little')
+
+	# 8 bytes
+	b += imageWidth.to_bytes(4,'little')
+
+	# 12 bytes
+	b += imageHeight.to_bytes(2,'little')
+
+	# 14 bytes
+	b += colorPlanes.to_bytes(2,'little')
+
+	# 16 bytes
+	b += bitsPerPixel.to_bytes(4,'little')
+
+	# 20 bytes
+	b += compression.to_bytes(4,'little')
+
+	# 24 bytes
+	b += imageSize.to_bytes(4,'little')
+
+	# 28 bytes
+	b += xPixelsPerMeter.to_bytes(4,'little')
+
+	# 32 bytes
+	b += yPixelsPerMeter.to_bytes(4,'little')
+
+	# 36 bytes
+	b += totalColors.to_bytes(4,'little')
+
+	# 36 bytes
+	b += importantColors.to_bytes(4,'little')
+
+	return b
+
+def printBMPContent():
+
+	return bmpContent
+
 def printBMP(outputFilename):
 
 	#Check if this file is a bitmap image
@@ -339,17 +401,17 @@ def printBMP(outputFilename):
 		sys.stderr.write("Error when opening file to write to. Aborting.\n")
 		sys.exit()
 
-	#Initialize the string we will be constructing to print to the output file.
+	#Initialize the byte string we will be constructing to print to the output file.
 
-	outputString = ""
+	outputBytes = None
 
-	#outputString += printBMPHeader()
-	#outputString += printDIBHeader()
-	#outputString += printColorPallet()
-	#outputString += printBMPContent()
+	outputBytes = printBMPHeader()
+	outputBytes += printDIBHeader()
+	#outputBytes += printColorPallet()
+	outputBytes += printBMPContent()
 
 	#Print to output file
-	f.write(outputString)
+	f.write(outputBytes)
 	f.close()
 
 
@@ -388,7 +450,7 @@ if len(outputTag) > 1:
 	sys.stderr.write("Multiple filenames have been provided for the output tag -o. Please provide only one -o option.\n")
 	sys.exit()
 # If -o is provided correctly
-elif len(outputTag) == 0:
+elif len(outputTag) == 1:
 	outputCheck = 1
 	# Isolate -o option
 	outputTag = outputTag[0]
@@ -402,8 +464,7 @@ elif len(outputTag) == 0:
 		sys.exit()
 
 # The inputFilename shall be the second non-option element of the arguments
-inputFilename = [(x for x in sys.argv if not x.startswith("-"))][1]
-
+inputFilename = list(x for x in sys.argv if not x.startswith("-"))[1]
 
 if debugCheck:
 	print("\n--INITIAL PARAMETERS PRINT--\n")
