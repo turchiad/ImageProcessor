@@ -161,15 +161,15 @@ def parseBMPHeader(h):
 	global fileType, fileSize, res1, res2, pixelDataOffset
 
 	# 2 bytes
-	fileType = parseBytes(h[0:1])
+	fileType = parseBytes(h[0:2])
 	# 4 bytes
-	fileSize = parseBytes(h[2:5])
+	fileSize = parseBytes(h[2:6])
 	# 2 bytes
-	res1 = parseBytes(h[6:7])
+	res1 = parseBytes(h[6:8])
 	# 2 bytes
-	res2 = parseBytes(h[8:9])
+	res2 = parseBytes(h[8:10])
 	# 4 bytes
-	pixelDataOffset = parseBytes(h[10:13])
+	pixelDataOffset = parseBytes(h[10:14])
 
 def parseDIBHeader(h):
 
@@ -179,27 +179,27 @@ def parseDIBHeader(h):
 	compression, imageSize, xPixelsPerMeter, yPixelsPerMeter, totalColors, importantColors
 
 	# 4 bytes
-	headerSize = parseBytes(h[0:3])
+	headerSize = parseBytes(h[0:4])
 	# 4 bytes
-	imageWidth = parseBytes(h[4:7])
+	imageWidth = parseBytes(h[4:8])
 	# 4 bytes
-	imageHeight = parseBytes(h[8:11])
+	imageHeight = parseBytes(h[8:12])
 	# 2 bytes
-	colorPlanes = parseBytes(h[12:13])
+	colorPlanes = parseBytes(h[12:14])
 	# 2 bytes
-	bitsPerPixel = parseBytes(h[14:15])
+	bitsPerPixel = parseBytes(h[14:16])
 	# 4 bytes
-	compression = parseBytes(h[16:19])
+	compression = parseBytes(h[16:20])
 	# 4 bytes
-	imageSize = parseBytes(h[20:23])
+	imageSize = parseBytes(h[20:24])
 	# 4 bytes
-	xPixelsPerMeter = parseBytes(h[24:27])
+	xPixelsPerMeter = parseBytes(h[24:28])
 	# 4 bytes
-	yPixelsPerMeter = parseBytes(h[28:31])
+	yPixelsPerMeter = parseBytes(h[28:32])
 	# 4 bytes
-	totalColors = parseBytes(h[32:35])
+	totalColors = parseBytes(h[32:36])
 	# 4 bytes
-	importantColors = parseBytes(h[36:39])
+	importantColors = parseBytes(h[36:40])
 
 def parseColorPallet(h):
 
@@ -282,8 +282,8 @@ def readBMP(inputFilename):
 
 	#Partition Data Step 1
 
-	BMPHeader = data[0:BMPHEADER_SIZE-1]
-	DIBHeader = data[BMPHEADER_SIZE:BMPHEADER_SIZE+DIBHEADER_SIZE-1]
+	BMPHeader = data[0:BMPHEADER_SIZE]
+	DIBHeader = data[BMPHEADER_SIZE:BMPHEADER_SIZE+DIBHEADER_SIZE]
 	
 	#Parse Partitioned Data Step 1
 
@@ -314,7 +314,7 @@ def readBMP(inputFilename):
 
 	#Partition Data Step 2
 
-	ColorPallet = data[BMPHEADER_SIZE+DIBHEADER_SIZE:BMPHEADER_SIZE+DIBHEADER_SIZE+COLORPALLET_SIZE-1]
+	ColorPallet = data[BMPHEADER_SIZE+DIBHEADER_SIZE:BMPHEADER_SIZE+DIBHEADER_SIZE+COLORPALLET_SIZE]
 	BMPContent = data[BMPHEADER_SIZE+DIBHEADER_SIZE+COLORPALLET_SIZE:]
 
 	#Parse Partitioned Data Step 2
@@ -354,13 +354,13 @@ def printDIBHeader():
 	b += imageWidth.to_bytes(4,'little')
 
 	# 12 bytes
-	b += imageHeight.to_bytes(2,'little')
+	b += imageHeight.to_bytes(4,'little')
 
 	# 14 bytes
 	b += colorPlanes.to_bytes(2,'little')
 
 	# 16 bytes
-	b += bitsPerPixel.to_bytes(4,'little')
+	b += bitsPerPixel.to_bytes(2,'little')
 
 	# 20 bytes
 	b += compression.to_bytes(4,'little')
