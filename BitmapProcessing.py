@@ -5,7 +5,7 @@ import sys
 
 # NOTE: Bitmaps are stored Little-Endian
 
-# T he Structure of a Bitmap File
+# The Structure of a Bitmap File
 ## BMP Header - 14 bytes
 ### Filetype - 2 bytes
 ### Filesize - 4 bytes
@@ -249,9 +249,7 @@ def parseBMPContent(h):
 
 	pixelSize = int(bitsPerPixel/8)
 
-	pixelData = [[[None]*pixelSize]*imageWidth]*imageHeight
-
-	#Data shall be organized as follows:
+	pixelData = [[[None for cell in range(pixelSize)] for col in range(imageWidth)] for row in range(imageHeight)]
 
 	counter = 0
 
@@ -259,6 +257,7 @@ def parseBMPContent(h):
 		for j in range(imageWidth):
 			for k in range(pixelSize):
 				pixelData[i][j][k] = bmpContent[counter]
+				counter += 1
 
 def readBMP(inputFilename):
 
@@ -384,7 +383,16 @@ def printDIBHeader():
 
 def printBMPContent():
 
-	return bmpContent
+	#Initialize empty bytes object
+
+	b = b''
+
+	for row in pixelData:
+		for col in row:
+			for i in col:
+				b += i.to_bytes(1,'little')
+
+	return b
 
 def printBMP(outputFilename):
 
@@ -403,9 +411,9 @@ def printBMP(outputFilename):
 
 	#Initialize the byte string we will be constructing to print to the output file.
 
-	outputBytes = None
+	outputBytes = b''
 
-	outputBytes = printBMPHeader()
+	outputBytes += printBMPHeader()
 	outputBytes += printDIBHeader()
 	#outputBytes += printColorPallet()
 	outputBytes += printBMPContent()
