@@ -38,9 +38,9 @@ import sys
 
 # Define Globals
 
-BMPHEADER_SIZE = 14 #bytes
-DIBHEADER_SIZE = 40 #bytes
-COLORPALLET_SIZE = 0 #bytes, to be defined later
+BMPHEADER_SIZE = 14 # bytes
+DIBHEADER_SIZE = 40 # bytes
+COLORPALLET_SIZE = 0 # bytes, to be defined later
 
 # Define Variables
 
@@ -85,15 +85,15 @@ outputCheck = 0
 # The purpose of printDebug() is to provide an overview of the script's state
 def printDebug():
 
-	#BMP Header Vars
+	# BMP Header Vars
 	print("BMP Header Data:")
 	print("File Type: " + str(fileType))
 	print("File Size: " + str(fileSize))
-	print("Reserved Byte #1: " + str(res1))
-	print("Reserved Byte #2: " + str(res2))
+	print("Reserved Byte # 1: " + str(res1))
+	print("Reserved Byte # 2: " + str(res2))
 	print("PixelDataOffset: " + str(pixelDataOffset))
 
-	#DIB Header vars
+	# DIB Header vars
 	print("\nDIB Header Data:")
 	print("Header Size: " + str(headerSize))
 	print("Image Width: " + str(imageWidth))
@@ -107,21 +107,21 @@ def printDebug():
 	print("Total Colors: " + str(totalColors))
 	print("Important Colors: " + str(importantColors))
 
-	#Color Pallet vars
+	# Color Pallet vars
 	print("\nColor Pallet Data:")
 	if colorPallet == None:
 		print("The Color Pallet has not been evaluated.")
-	#Short circuiting will ensure this does not run on None
+	# Short circuiting will ensure this does not run on None
 	elif len(colorPallet) == 0:
 		print("The Color Pallet is not used.")
 	else:
 
-		#Color Pallet Rows
+		# Color Pallet Rows
 		cpRows = len(colorPallet)
-		#Color Pallet Cols
+		# Color Pallet Cols
 		cpCols = len(colorPallet[0])
 
-		#Print the 2D Array
+		# Print the 2D Array
 		print("The Color Pallet has " + str(cpRows) + " rows")
 		for i in range(cpRows):
 			print("Row " + str(i) + ": ",end="")
@@ -131,7 +131,7 @@ def printDebug():
 					print(",",end="")
 			print()
 
-	#bmpContent vars
+	# bmpContent vars
 	print("\nBMP Content/Pixel Data:")
 	if bmpContent == None:
 		print("BMP Content has not yet been evaluated.")
@@ -203,18 +203,18 @@ def parseDIBHeader(h):
 
 def parseColorPallet(h):
 
-	#Define Globals
+	# Define Globals
 	global colorPallet
 
-	#Number of Rows/Colors in the Pallet
+	# Number of Rows/Colors in the Pallet
 	numRows= int(len(h)/4)
 
-	#Print numRows if debug is checked.
+	# Print numRows if debug is checked.
 	if debugCheck:
 		print("\n--FROM parseColorPallet()--")
 		print("Number of Color Pallet Rows: " + str(numRows) + "\n")
 
-	#Initialize empty array
+	# Initialize empty array
 	colorPallet = [[None for i in range(4)] for j in range(numRows)]
 
 	counter = 0
@@ -225,7 +225,7 @@ def parseColorPallet(h):
 			counter += 1
 
 
-	#Print the 2D size of colorPallet if debug is checked.
+	# Print the 2D size of colorPallet if debug is checked.
 	if debugCheck:
 		print("\n--FROM parseColorPallet()--")
 		ySize = len(colorPallet)
@@ -237,15 +237,15 @@ def parseColorPallet(h):
 
 def parseBMPContent(h):
 
-	#Define Globals
+	# Define Globals
 	global bmpContent, pixelData
 
-	#Remainder of the data stored as pixels
+	# Remainder of the data stored as pixels
 	bmpContent = h
 
-	#Initialize pixelData as a [Height][Width][Pixel] array
-	#Currently this only functions for 24-bit color depth.
-	#I will have to implement a 'pixel' object to complete this properly.
+	# Initialize pixelData as a [Height][Width][Pixel] array
+	# Currently this only functions for 24-bit color depth.
+	# I will have to implement a 'pixel' object to complete this properly.
 
 	pixelSize = int(bitsPerPixel/8)
 
@@ -261,13 +261,13 @@ def parseBMPContent(h):
 
 def readBMP(inputFilename):
 
-	#Check if this file is a bitmap image
+	# Check if this file is a bitmap image
 
 	if not isBitmapImage(inputFilename):
 		sys.stderr.write("Attempted to read from a file which is not a BMP. Aborting.\n")
 		sys.exit()
 
-	#Attempt to open file
+	# Attempt to open file
 
 	try:
 		f = open(inputFilename,'rb')
@@ -275,34 +275,34 @@ def readBMP(inputFilename):
 		sys.stderr.write("Attempted to access a file which does not exist. Aborting.\n")
 		sys.exit()
 
-	#Read contents of BMP
+	# Read contents of BMP
 
 	data = f.read()
 
-	#Partition Data Step 1
+	# Partition Data Step 1
 
 	BMPHeader = data[0:BMPHEADER_SIZE]
 	DIBHeader = data[BMPHEADER_SIZE:BMPHEADER_SIZE+DIBHEADER_SIZE]
 	
-	#Parse Partitioned Data Step 1
+	# Parse Partitioned Data Step 1
 
 	parseBMPHeader(BMPHeader)
 	parseDIBHeader(DIBHeader)
 
-	#Contingent on the DIB Header being parsed correctly
+	# Contingent on the DIB Header being parsed correctly
 
 	# Must define COLORPALLET_SIZE as a global because it is evaluated here.
 	global COLORPALLET_SIZE
 
-	#If BitsPerPixel is more than 8 (and therefore totalColors = 0)
+	# If BitsPerPixel is more than 8 (and therefore totalColors = 0)
 	if bitsPerPixel > 8 and totalColors == 0:
 		COLORPALLET_SIZE = 0
-	#If BitsPerPixel is less than or equal to 8, but totalColors is still 0 (should not happen)
+	# If BitsPerPixel is less than or equal to 8, but totalColors is still 0 (should not happen)
 	elif bitsPerPixel <= 8 and totalColors == 0:
 		sys.stderr.write("BitsPerPixel <= 8 and TotalColors > 0 resulting in an inconsistency. Aborting.\n")
 		sys.exit()
 		return
-	#If BitsPerPixel is less than or equal to 8 (and therefore totalColors > 0)
+	# If BitsPerPixel is less than or equal to 8 (and therefore totalColors > 0)
 	else:
 		COLORPALLET_SIZE = 4 * totalColors
 
@@ -311,12 +311,12 @@ def readBMP(inputFilename):
 	if BMPHEADER_SIZE + DIBHEADER_SIZE + COLORPALLET_SIZE != pixelDataOffset:
 		sys.stderr.write("WARNING: pixelDataOffset does not match ColorPallet information. This BMP file has not been properly constructed.\n")
 
-	#Partition Data Step 2
+	# Partition Data Step 2
 
 	ColorPallet = data[BMPHEADER_SIZE+DIBHEADER_SIZE:BMPHEADER_SIZE+DIBHEADER_SIZE+COLORPALLET_SIZE]
 	BMPContent = data[BMPHEADER_SIZE+DIBHEADER_SIZE+COLORPALLET_SIZE:]
 
-	#Parse Partitioned Data Step 2
+	# Parse Partitioned Data Step 2
 
 	parseColorPallet(ColorPallet)
 	parseBMPContent(BMPContent)
@@ -383,7 +383,7 @@ def printDIBHeader():
 
 def printBMPContent():
 
-	#Initialize empty bytes object
+	# Initialize empty bytes object
 
 	b = b''
 
@@ -394,14 +394,42 @@ def printBMPContent():
 
 	return b
 
+# Image Filtering
+
+def isImageLoaded():
+	if pixelData == None or len(pixelData) == 0:
+		sys.stderr.write("Error when editing image: pixelData is empty. Aborting.\n")
+		sys.exit(0)
+
+
+## The purpose of this function is to take pixelData and modify the values
+## by intensity * 10, to a maximum of 255.
+def brighten(intensity):
+
+	global pixelData
+
+	# Check if pixelData is loaded
+	isImageLoaded()
+
+	# Provide function for mapping over pixelData
+	def increaseBy(val):
+		return val + 10 * intensity if val + 10 * intensity <= 255 else 255
+
+	# Pixel 
+	pixelData = list(map( \
+		lambda row: list(map( \
+		lambda col: list(map( \
+		increaseBy, col)), row)), pixelData))
+
+
 def printBMP(outputFilename):
 
-	#Check if this file is a bitmap image
+	# Check if this file is a bitmap image
 
 	if not isBitmapImage(outputFilename):
 		sys.stderr.write("WARNING: Printing to a file without a .bmp extension.\n")
 
-	#Attempt to open file
+	# Attempt to open file
 
 	try:
 		f = open(outputFilename,'wb')
@@ -409,16 +437,16 @@ def printBMP(outputFilename):
 		sys.stderr.write("Error when opening file to write to. Aborting.\n")
 		sys.exit()
 
-	#Initialize the byte string we will be constructing to print to the output file.
+	# Initialize the byte string we will be constructing to print to the output file.
 
 	outputBytes = b''
 
 	outputBytes += printBMPHeader()
 	outputBytes += printDIBHeader()
-	#outputBytes += printColorPallet()
+	# outputBytes += printColorPallet()
 	outputBytes += printBMPContent()
 
-	#Print to output file
+	# Print to output file
 	f.write(outputBytes)
 	f.close()
 
@@ -489,6 +517,42 @@ if debugCheck:
 # ANY PROCESSING TO BE DONE PER THE OPTIONS TAGS
 ###
 ###
+
+# Handling modifier tags
+modTags = [x for x in sys.argv if x.startswith("-m")]
+
+for modTag in modTags:
+	# Check the that modifier is written properly
+	if "=" not in modTag:
+		sys.stderr.write("-m modifier option has not been configured properly. See -? for help.\n")
+		sys.exit()
+	# Modifier inidcator
+	modType = modTag[modTag.index("=")+1:].lower()
+
+	# Handling modifier indicator by type
+	if modType.startswith("b"):
+
+		# Check that the brighten modifier has an argument:
+		modTypeTest1 = modType[1:]
+		modTypeTest2 = modTypeTest1[1:-1]
+		if not (modTypeTest1.startswith("[") and modTypeTest1.endswith("]") and modTypeTest2.isdecimal()):
+			sys.stderr.write("-m modifier b has not been configured properly. See -? for help.\n")
+			sys.exit()
+
+		# Handle arguments
+		
+		# Cast brightness intensity to int
+		arg = None
+		try:
+			arg = int(modType[2:-1])
+		except:
+			sys.stderr.write("Unexpected error. Non-decimal arguments have been provided to modifier option. Configuration precheck failed. Aborting. \n")
+			sys.exit()
+
+		# If nothing has failed so far:
+		brighten(arg)
+
+# Outputting
 
 # Conditional on -o
 if outputCheck:
