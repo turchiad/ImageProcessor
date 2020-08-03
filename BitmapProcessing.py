@@ -1,7 +1,7 @@
 # Started 2020-07-11 at 4:13 P.M. by D.T.
 # https://itnext.io/bits-to-bitmaps-a-simple-walkthrough-of-bmp-image-format-765dc6857393 is used as a reference for the structure of a Bitmap
 
-import sys
+import sys, copy
 
 # NOTE: Bitmaps are stored Little-Endian
 
@@ -415,12 +415,58 @@ def brighten(intensity):
 	def increaseBy(val):
 		return val + 10 * intensity if val + 10 * intensity <= 255 else 255
 
-	# Pixel 
 	pixelData = list(map( \
 		lambda row: list(map( \
 		lambda col: list(map( \
 		increaseBy, col)), row)), pixelData))
 
+## The purpose of this function is to take pixelData and apply a box blur to it
+## This is to say that every element of pixelData shall become the average of itself and its
+## peers within dist of the origin point such that boxBlur(0) returns the exact same image
+## and boxBlur(imageHeight if imageHeight > imageWidth else imageWidth) returns an image
+## which is all the same color.
+def boxBlur(dist):
+
+	global pixelData
+
+	# Check if pixelData is loaded
+	isImageLoaded()
+
+
+	# Check if dist is in the right format.
+	# Short circuiting will prevent the x.is_integer from executing, averting a crash
+	if isinstance(x,float) and x.is_integer() and not x.isinstance(x,int):
+		sys.stderr.write("Error: non-integer value provided as an argument for boxBlur.\n")
+
+	# We must create a reference array so we don't pull from blurred values
+	ref = copy.deepcopy(pixelData)
+
+	# Get upper boundaries of image dimensions for edge cases
+	rowBound = len(pixelData)
+	colBound = len(pixelData[0])
+
+	# Apply box blur
+	for row in range(len(pixelData)):
+		for col in range(row):
+			for color in range(col):
+				# Initialize the sum & n for the average
+				colorSum = 0
+				n = 0
+
+				# Iterate from -dist to dist (min 0, max rowBound)
+				startRow = row - dist if row - dist > 0 else 0
+				startCol = col - dist if col - dist > 0 else 0
+				endRow = row + dist if row + dist + 1 < rowBound else rowBound
+				endCol = col + dist if col + dist + 1 < colBound else colBound 
+
+				# Add elements of sum
+				for i in range(startRow,endRow):
+					for j in range(startCol, endCol):
+						colorSum += ref[i][j][color]
+						n += 1
+
+				colorAve = colorSum / n
+				color = colorAve
 
 def printBMP(outputFilename):
 
