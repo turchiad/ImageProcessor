@@ -429,26 +429,30 @@ def boxBlur(dist):
 
 	global pixelData
 
+	# Edge case
+	if dist == 0:
+		return
+
 	# Check if pixelData is loaded
 	isImageLoaded()
 
 
 	# Check if dist is in the right format.
-	# Short circuiting will prevent the x.is_integer from executing, averting a crash
-	if isinstance(x,float) and x.is_integer() and not x.isinstance(x,int):
+	# Short circuiting will prevent the dist.is_integer from executing, averting a crash
+	if isinstance(dist,float) and dist.is_integer() and not isinstance(dist,int):
 		sys.stderr.write("Error: non-integer value provided as an argument for boxBlur.\n")
 
 	# We must create a reference array so we don't pull from blurred values
 	ref = copy.deepcopy(pixelData)
 
 	# Get upper boundaries of image dimensions for edge cases
-	rowBound = len(pixelData)
-	colBound = len(pixelData[0])
+	rowBound = len(ref)
+	colBound = len(ref[0])
 
 	# Apply box blur
 	for row in range(len(pixelData)):
-		for col in range(row):
-			for color in range(col):
+		for col in range(len(pixelData[row])):
+			for color in range(len(pixelData[row][col])):
 				# Initialize the sum & n for the average
 				colorSum = 0
 				n = 0
@@ -462,11 +466,15 @@ def boxBlur(dist):
 				# Add elements of sum
 				for i in range(startRow,endRow):
 					for j in range(startCol, endCol):
-						colorSum += ref[i][j][color]
-						n += 1
+						try:
+							colorSum += ref[i][j][color]
+							n += 1
+						except:
+							sys.stderr.print("Error: attempted to access non-existent value in box blur. Aborting.\n")
+							sys.exit()
 
 				colorAve = colorSum / n
-				color = colorAve
+				pixelData[row][col][color] = int(colorAve) if colorAve >= 0 and colorAve <= 255 else 255 if colorAve > 255 else 0
 
 def printBMP(outputFilename):
 
@@ -576,12 +584,46 @@ for modTag in modTags:
 	modType = modTag[modTag.index("=")+1:].lower()
 
 	# Handling modifier indicator by type
-	if modType.startswith("b"):
+
+	# Box Blur
+
+	if modType.startswith("bb"):
+
+		modTypeIndicator = "bb"
+
+		# Check that the box blur modifier has an argument:
+		modTypeArgs = modType[len(modTypeIndicator):]
+
+		modTypeTest1 = modTypeArgs.startswith("[")
+		modTypeTest2 = modTypeArgs.endswith("]")
+		modTypeTest3 = modTypeArgs[1:-1].isdecimal()
+
+		if not (modTypeTest1 and modTypeTest2 and modTypeTest3):
+			sys.stderr.write("-m modifier bb has not been configured properly. See -? for help.\n")
+			sys.exit()
+
+		# Handle arguments
+		
+		# Cast brightness intensity to int
+		arg = None
+		try:
+			arg = int(modTypeArgs[1:-1])
+		except:
+			sys.stderr.write("Unexpected error. Non-decimal arguments have been provided to modifier option. Configuration precheck failed. Aborting. \n")
+			sys.exit()
+
+		# If nothing has failed so far:
+		boxBlur(arg)
+
+	# Brighten
+
+	elif modType.startswith("b"):
 
 		# Check that the brighten modifier has an argument:
-		modTypeTest1 = modType[1:]
-		modTypeTest2 = modTypeTest1[1:-1]
-		if not (modTypeTest1.startswith("[") and modTypeTest1.endswith("]") and modTypeTest2.isdecimal()):
+		modTypeTest1 = modType[1:].startswith("[")
+		modTypeTest2 = modType[1:].endswith("]")
+		modTypeTest3 = modTypeTest1[1:-1].isdecimal()
+		if not (modTypeTest1 and modTypeTest2 and modTypeTest3):
 			sys.stderr.write("-m modifier b has not been configured properly. See -? for help.\n")
 			sys.exit()
 
