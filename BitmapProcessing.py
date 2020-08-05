@@ -1,7 +1,7 @@
 # Started 2020-07-11 at 4:13 P.M. by D.T.
 # https://itnext.io/bits-to-bitmaps-a-simple-walkthrough-of-bmp-image-format-765dc6857393 is used as a reference for the structure of a Bitmap
 
-import sys, copy
+import sys, copy, math
 
 # NOTE: Bitmaps are stored Little-Endian
 
@@ -387,8 +387,13 @@ def printBMPContent():
 
 	b = b''
 
+	count = 0
+
 	for row in pixelData:
 		for col in row:
+			count += 1
+			if count % 100 == 0:
+				print("Progress: " + "{:.2f}".format(count / (imageWidth*imageHeight)*100))
 			for i in col:
 				b += i.to_bytes(1,'little')
 
@@ -475,6 +480,63 @@ def boxBlur(dist):
 
 				colorAve = colorSum / n
 				pixelData[row][col][color] = int(colorAve) if colorAve >= 0 and colorAve <= 255 else 255 if colorAve > 255 else 0
+
+## The purpose of this function is to take pixelData and apply a median filter to it.
+## This is to say that every element of pixelData should be the median of itself and
+## its peers within dist.
+def medianFilter(dist):
+
+	global pixelData
+
+	# Edge case
+	if dist == 0:
+		return
+
+	# Check if pixelData is loaded
+	isImageLoaded()
+
+
+	# Check if dist is in the right format.
+	# Short circuiting will prevent the dist.is_integer from executing, averting a crash
+	if isinstance(dist,float) and dist.is_integer() and not isinstance(dist,int):
+		sys.stderr.write("Error: non-integer value provided as an argument for boxBlur.\n")
+
+	# We must create a reference array so we don't pull from blurred values
+	ref = copy.deepcopy(pixelData)
+
+	# Get upper boundaries of image dimensions for edge cases
+	rowBound = len(ref)
+	colBound = len(ref[0])
+
+	count = 0
+
+	# Apply median filter
+	for row in range(len(pixelData)):
+		for col in range(len(pixelData[row])):
+			count += 1
+			if count % 100 == 0:
+				print("Progress: " + "{:.2f}".format(count / (imageWidth*imageHeight)*100))
+			for color in range(len(pixelData[row][col])):
+				# Initialize the median
+				colorMed = []
+
+				# Iterate from -dist to dist (min 0, max rowBound)
+				startRow = row - dist if row - dist > 0 else 0
+				startCol = col - dist if col - dist > 0 else 0
+				endRow = row + dist if row + dist + 1 < rowBound else rowBound
+				endCol = col + dist if col + dist + 1 < colBound else colBound 
+
+				# Add elements of sum
+				for i in range(startRow,endRow):
+					for j in range(startCol, endCol):
+						try:
+							colorMed.append(ref[i][j][color])
+						except:
+							sys.stderr.print("Error: attempted to access non-existent value in box blur. Aborting.\n")
+							sys.exit()
+
+				colorMed.sort()
+				pixelData[row][col][color] = colorMed[math.ceil(len(colorMed) / 2 - 1)]
 
 def printBMP(outputFilename):
 
@@ -585,9 +647,39 @@ for modTag in modTags:
 
 	# Handling modifier indicator by type
 
+	# Median Filter
+
+	if modType.startswith("mf"):
+
+		modTypeIndicator = "mf"
+
+		# Check that the box blur modifier has an argument:
+		modTypeArgs = modType[len(modTypeIndicator):]
+
+		modTypeTest1 = modTypeArgs.startswith("[")
+		modTypeTest2 = modTypeArgs.endswith("]")
+		modTypeTest3 = modTypeArgs[1:-1].isdecimal()
+
+		if not (modTypeTest1 and modTypeTest2 and modTypeTest3):
+			sys.stderr.write("-m modifier bb has not been configured properly. See -? for help.\n")
+			sys.exit()
+
+		# Handle arguments
+		
+		# Cast brightness intensity to int
+		arg = None
+		try:
+			arg = int(modTypeArgs[1:-1])
+		except:
+			sys.stderr.write("Unexpected error. Non-decimal arguments have been provided to modifier option. Configuration precheck failed. Aborting. \n")
+			sys.exit()
+
+		# If nothing has failed so far:
+		medianFilter(arg)
+
 	# Box Blur
 
-	if modType.startswith("bb"):
+	elif modType.startswith("bb"):
 
 		modTypeIndicator = "bb"
 
@@ -619,12 +711,17 @@ for modTag in modTags:
 
 	elif modType.startswith("b"):
 
-		# Check that the brighten modifier has an argument:
-		modTypeTest1 = modType[1:].startswith("[")
-		modTypeTest2 = modType[1:].endswith("]")
-		modTypeTest3 = modTypeTest1[1:-1].isdecimal()
+		modTypeIndicator = "b"
+
+		# Check that the box blur modifier has an argument:
+		modTypeArgs = modType[len(modTypeIndicator):]
+
+		modTypeTest1 = modTypeArgs.startswith("[")
+		modTypeTest2 = modTypeArgs.endswith("]")
+		modTypeTest3 = modTypeArgs[1:-1].isdecimal()
+
 		if not (modTypeTest1 and modTypeTest2 and modTypeTest3):
-			sys.stderr.write("-m modifier b has not been configured properly. See -? for help.\n")
+			sys.stderr.write("-m modifier bb has not been configured properly. See -? for help.\n")
 			sys.exit()
 
 		# Handle arguments
@@ -632,7 +729,7 @@ for modTag in modTags:
 		# Cast brightness intensity to int
 		arg = None
 		try:
-			arg = int(modType[2:-1])
+			arg = int(modTypeArgs[1:-1])
 		except:
 			sys.stderr.write("Unexpected error. Non-decimal arguments have been provided to modifier option. Configuration precheck failed. Aborting. \n")
 			sys.exit()
@@ -644,6 +741,7 @@ for modTag in modTags:
 
 # Conditional on -o
 if outputCheck:
+	print("Entering print.")
 	printBMP(outputFilename)
 
 
