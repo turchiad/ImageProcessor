@@ -73,10 +73,15 @@ pixelData = None
 
 # Define Help String
 
-helpString = """usage: python /path/to/BitmapProcessing.py [options] [inputFilename]
+helpString = """usage: python /path/to/BitmapProcessing.py <options> <inputFilename>
 	-?: Show usage for this script
 	-debug: Provide verbose debugging info during runtime
-	-o=[filename]: Output the file read to the inputFilename provided here"""
+	-o=<filename>: Output the file read to the inputFilename provided here
+	-m=<modifier tag>[<input1>,<input2>,...]
+
+		modifier tags:
+		b[<intensity>] - brighten
+		bb[<dist>]"""
 
 # Define option checks
 debugCheck = 0
@@ -537,6 +542,69 @@ def medianFilter(dist):
 
 				colorMed.sort()
 				pixelData[row][col][color] = colorMed[math.ceil(len(colorMed) / 2 - 1)]
+
+
+## The purpose of this function is to take pixelData and apply a Gaussian Blur to it
+## This is to say that every element of pixelData will become the weighted average
+## of its peers within a sample kernel of three deviations.
+
+def gaussianBlur():
+
+	global pixelData
+
+	# Check if pixelData is loaded
+	isImageLoaded()
+
+	## Data should be a square matrix of color values (agnostic to R/G/B)
+	def genKernel(data):
+
+		# Prevent writing to the sample data provided
+		ref = copy.deepcopy(data)
+
+		#Determine the mean
+		s = 0
+		n = 0
+		for row in ref:
+			for point in row:
+				c += 1
+				n += point
+		ave = n / c
+
+		#Determine the variance
+		d = 0
+		for row in ref:
+			for point in row:
+				d += (ave - point)**2
+		var = v / d
+
+		#Determine the standard deviation
+		sigma = var**0.5
+
+		# Gaussian Function
+		# Calculates the probability of a result at x
+		# given a center of ave & a standard deviation of sigma
+		def G(x):
+			return (2*math.pi*sigma**2)**-0.5 * math.e ** (-1 * (x-ave)**2 / (2 * sigma ** 2))
+
+		#Re-express ref as probabilities (Gaussian kernel)
+		for row in ref:
+			for point in row:
+				point = G(point)
+
+	# We must create a reference array so we don't pull from blurred values
+	ref = copy.deepcopy(pixelData)
+
+	count = 0
+
+	for row in range(len(pixelData)):
+		for col in range(len(pixelData[row])):
+			count += 1
+			if count % 100 == 0:
+				print("Progress: " + "{:.2f}".format(count / (imageWidth*imageHeight)*100))
+			for color in range(len(pixelData[row][col])):
+				print(0)
+
+
 
 def printBMP(outputFilename):
 
