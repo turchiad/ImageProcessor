@@ -87,6 +87,13 @@ helpString = """usage: python /path/to/BitmapProcessing.py <options> <inputFilen
 debugCheck = 0
 outputCheck = 0
 
+# Ease of Use Functions
+
+# Subgrid function from "joaquin" Oct 1 2011, stack exchange
+# https://stackoverflow.com/questions/7620482/python-get-a-sub-2d-list-from-bigger-2d-list
+def getSubGrid(x1, y1, x2, y2, grid):
+    return [item[x1:x2] for item in grid[y1:y2]]
+
 # The purpose of printDebug() is to provide an overview of the script's state
 def printDebug():
 
@@ -513,6 +520,7 @@ def medianFilter(dist):
 	rowBound = len(ref)
 	colBound = len(ref[0])
 
+	# Define a counter for debugging/progress purposes
 	count = 0
 
 	# Apply median filter
@@ -528,8 +536,8 @@ def medianFilter(dist):
 				# Iterate from -dist to dist (min 0, max rowBound)
 				startRow = row - dist if row - dist > 0 else 0
 				startCol = col - dist if col - dist > 0 else 0
-				endRow = row + dist if row + dist + 1 < rowBound else rowBound
-				endCol = col + dist if col + dist + 1 < colBound else colBound 
+				endRow = row + dist + 1 if row + dist + 1 < rowBound else rowBound
+				endCol = col + dist + 1 if col + dist + 1 < colBound else colBound 
 
 				# Add elements of sum
 				for i in range(startRow,endRow):
@@ -548,37 +556,49 @@ def medianFilter(dist):
 ## This is to say that every element of pixelData will become the weighted average
 ## of its peers within a sample kernel of three deviations.
 
-def gaussianBlur():
+def gaussianBlur(dist):
 
 	global pixelData
 
 	# Check if pixelData is loaded
 	isImageLoaded()
 
-	## Data should be a square matrix of color values (agnostic to R/G/B)
-	def genKernel(data):
+	## Data should be a square matrix of color values, color should be the index of interest
+	def genKernel(data, color):
 
 		# Prevent writing to the sample data provided
 		ref = copy.deepcopy(data)
 
+		print(ref)
+
 		#Determine the mean
 		s = 0
 		n = 0
+
 		for row in ref:
 			for point in row:
-				c += 1
-				n += point
-		ave = n / c
+				n += 1
+				s += point[color]
+
+		ave = s / n
 
 		#Determine the variance
-		d = 0
+		v = 0
 		for row in ref:
 			for point in row:
-				d += (ave - point)**2
-		var = v / d
+				v += (ave - point[color])**2
+		var = v / (n - 1)
+
+		print("v "+ str(v))
+		print("n "+ str(n))
+		print("var " + str(var))
 
 		#Determine the standard deviation
 		sigma = var**0.5
+
+		#Prevent divide by zero
+		if sigma == 0:
+			sigma = 1e-9
 
 		# Gaussian Function
 		# Calculates the probability of a result at x
@@ -587,13 +607,20 @@ def gaussianBlur():
 			return (2*math.pi*sigma**2)**-0.5 * math.e ** (-1 * (x-ave)**2 / (2 * sigma ** 2))
 
 		#Re-express ref as probabilities (Gaussian kernel)
-		for row in ref:
-			for point in row:
-				point = G(point)
+		for row in range(len(ref)):
+			for col in range(len(ref[row])):
+				ref[row][col] = G(ref[row][col][color])
+
+		return ref
 
 	# We must create a reference array so we don't pull from blurred values
 	ref = copy.deepcopy(pixelData)
 
+	# Get upper boundaries of image dimensions for edge cases
+	rowBound = len(ref)
+	colBound = len(ref[0])
+
+	# Define a counter for debugging/progress purposes
 	count = 0
 
 	for row in range(len(pixelData)):
@@ -602,7 +629,60 @@ def gaussianBlur():
 			if count % 100 == 0:
 				print("Progress: " + "{:.2f}".format(count / (imageWidth*imageHeight)*100))
 			for color in range(len(pixelData[row][col])):
-				print(0)
+
+				# Define the boundaries of the kernel
+				startRow = row - dist if row - dist > 0 else 0
+				startCol = col - dist if col - dist > 0 else 0
+				endRow = row + dist + 1 if row + dist + 1 < rowBound else rowBound
+				endCol = col + dist + 1 if col + dist + 1 < colBound else colBound
+
+				g = getSubGrid(startCol, startRow, endCol, endRow, ref)
+
+				print("c" + str(col))
+				print("sc" + str(startCol))
+				print("ec" + str(endCol))
+				print("r" + str(row))
+				print("sr" + str(startRow))
+				print("er" + str(endRow))
+				print(g)
+
+				# Generate probability kernel
+				kernel = genKernel(g,color)
+
+				print("k" + str(kernel))
+
+				# To normalize the weights
+				probSum = sum(sum(kernel,[]))
+
+				# Perform weighted average
+				weightedSum = 0
+				n = 0
+
+				for kernelRow in range(len(kernel)):
+					for kernelCol in range(len(kernel[kernelRow])):
+						# Evaluate equivalent indices for ref
+						refRow = kernelRow + startRow
+						refCol = kernelCol + startCol
+
+						print("kc" + str(kernelCol))
+						print("rc" + str(refCol))
+						print("kr" + str(kernelRow))
+						print("rr" + str(refRow))
+
+						weightedSum += ref[refRow][refCol][color] * kernel[kernelRow][kernelCol]
+						n += 1
+
+				weightedAve = weightedSum / n / probSum
+
+				if weightedAve > 255:
+					print("ERROR: " + str(weightedAve))
+					sys.exit()
+
+				pixelData[row][col][color] = round(weightedAve)
+
+
+
+
 
 
 
@@ -715,9 +795,39 @@ for modTag in modTags:
 
 	# Handling modifier indicator by type
 
+	# Gaussian Blur
+
+	if modType.startswith("gb"):
+
+		modTypeIndicator = "gb"
+
+		# Check that the box blur modifier has an argument:
+		modTypeArgs = modType[len(modTypeIndicator):]
+
+		modTypeTest1 = modTypeArgs.startswith("[")
+		modTypeTest2 = modTypeArgs.endswith("]")
+		modTypeTest3 = modTypeArgs[1:-1].isdecimal()
+
+		if not (modTypeTest1 and modTypeTest2 and modTypeTest3):
+			sys.stderr.write("-m modifier gb has not been configured properly. See -? for help.\n")
+			sys.exit()
+
+		# Handle arguments
+		
+		# Cast brightness intensity to int
+		arg = None
+		try:
+			arg = int(modTypeArgs[1:-1])
+		except:
+			sys.stderr.write("Unexpected error. Non-decimal arguments have been provided to modifier option. Configuration precheck failed. Aborting. \n")
+			sys.exit()
+
+		# If nothing has failed so far:
+		gaussianBlur(arg)
+
 	# Median Filter
 
-	if modType.startswith("mf"):
+	elif modType.startswith("mf"):
 
 		modTypeIndicator = "mf"
 
