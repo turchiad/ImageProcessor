@@ -447,7 +447,7 @@ def boxBlur(dist):
 	global pixelData
 
 	# Edge case
-	if dist == 0:
+	if dist <= 0:
 		return
 
 	# Check if pixelData is loaded
@@ -501,12 +501,11 @@ def medianFilter(dist):
 	global pixelData
 
 	# Edge case
-	if dist == 0:
+	if dist <= 0:
 		return
 
 	# Check if pixelData is loaded
 	isImageLoaded()
-
 
 	# Check if dist is in the right format.
 	# Short circuiting will prevent the dist.is_integer from executing, averting a crash
@@ -539,7 +538,7 @@ def medianFilter(dist):
 				endRow = row + dist + 1 if row + dist + 1 < rowBound else rowBound
 				endCol = col + dist + 1 if col + dist + 1 < colBound else colBound 
 
-				# Add elements of sum
+				# Add elements of median
 				for i in range(startRow,endRow):
 					for j in range(startCol, endCol):
 						try:
@@ -556,62 +555,32 @@ def medianFilter(dist):
 ## This is to say that every element of pixelData will become the weighted average
 ## of its peers within a sample kernel of three deviations.
 
-def gaussianBlur(dist):
+def gaussianBlur(sigma):
 
 	global pixelData
+
+	# Edge Case
+	if sigma <= 0:
+		return
+
+	# Check if sigma is in the right format.
+	# Short circuiting will prevent the sigma.is_integer from executing, averting a crash
+	if isinstance(sigma,float) and sigma.is_integer() and not isinstance(sigma,int):
+		sys.stderr.write("Error: non-integer value provided as an argument for gaussianBlur.\n")
 
 	# Check if pixelData is loaded
 	isImageLoaded()
 
-	## Data should be a square matrix of color values, color should be the index of interest
-	def genKernel(data, color):
+	# Define the Gaussian Function
 
-		# Prevent writing to the sample data provided
-		ref = copy.deepcopy(data)
+	def G(mu, sigma, x):
+		return 1 / (sigma * (2 * math.pi) ** 0.5) * math.exp(-0.5 * ((x - mu) / sigma) ** 2)
 
-		print(ref)
+	# Generate the Kernel(can be used for X & Y)
+	kernel = []
 
-		#Determine the mean
-		s = 0
-		n = 0
-
-		for row in ref:
-			for point in row:
-				n += 1
-				s += point[color]
-
-		ave = s / n
-
-		#Determine the variance
-		v = 0
-		for row in ref:
-			for point in row:
-				v += (ave - point[color])**2
-		var = v / (n - 1)
-
-		print("v "+ str(v))
-		print("n "+ str(n))
-		print("var " + str(var))
-
-		#Determine the standard deviation
-		sigma = var**0.5
-
-		#Prevent divide by zero
-		if sigma == 0:
-			sigma = 1e-9
-
-		# Gaussian Function
-		# Calculates the probability of a result at x
-		# given a center of ave & a standard deviation of sigma
-		def G(x):
-			return (2*math.pi*sigma**2)**-0.5 * math.e ** (-1 * (x-ave)**2 / (2 * sigma ** 2))
-
-		#Re-express ref as probabilities (Gaussian kernel)
-		for row in range(len(ref)):
-			for col in range(len(ref[row])):
-				ref[row][col] = G(ref[row][col][color])
-
-		return ref
+	for i in range(6 * sigma + 1):
+		kernel.append(G(3 * sigma, sigma, i))
 
 	# We must create a reference array so we don't pull from blurred values
 	ref = copy.deepcopy(pixelData)
@@ -620,71 +589,93 @@ def gaussianBlur(dist):
 	rowBound = len(ref)
 	colBound = len(ref[0])
 
-	# Define a counter for debugging/progress purposes
-	count = 0
+	print(kernel)
 
+	# Apply vertical pass
 	for row in range(len(pixelData)):
 		for col in range(len(pixelData[row])):
-			count += 1
-			if count % 100 == 0:
-				print("Progress: " + "{:.2f}".format(count / (imageWidth*imageHeight)*100))
 			for color in range(len(pixelData[row][col])):
 
-				# Define the boundaries of the kernel
-				startRow = row - dist if row - dist > 0 else 0
-				startCol = col - dist if col - dist > 0 else 0
-				endRow = row + dist + 1 if row + dist + 1 < rowBound else rowBound
-				endCol = col + dist + 1 if col + dist + 1 < colBound else colBound
+				# Iterate from -3 sigma to + 3 sigma (min 0, max rowBound)
+				startRow = row - 3*sigma if row - 3*sigma > 0 else 0
+				endRow = row + 3*sigma + 1 if row + 3*sigma + 1 < rowBound else rowBound
 
-				g = getSubGrid(startCol, startRow, endCol, endRow, ref)
-
-				print("c" + str(col))
-				print("sc" + str(startCol))
-				print("ec" + str(endCol))
-				print("r" + str(row))
-				print("sr" + str(startRow))
-				print("er" + str(endRow))
-				print(g)
-
-				# Generate probability kernel
-				kernel = genKernel(g,color)
-
-				print("k" + str(kernel))
-
-				# To normalize the weights
-				probSum = sum(sum(kernel,[]))
-
-				# Perform weighted average
 				weightedSum = 0
-				n = 0
+				
+				# To be defined in the loop, for calculating a normalization divisor
+				kernelStart = None
+				kernelEnd = None
 
-				for kernelRow in range(len(kernel)):
-					for kernelCol in range(len(kernel[kernelRow])):
-						# Evaluate equivalent indices for ref
-						refRow = kernelRow + startRow
-						refCol = kernelCol + startCol
+				for i in range(startRow,endRow):
+					# To obtain the right Gaussian Probability Density
+					kernelPosition = 3 * sigma - (row - i)
 
-						print("kc" + str(kernelCol))
-						print("rc" + str(refCol))
-						print("kr" + str(kernelRow))
-						print("rr" + str(refRow))
+					if i == startRow:
+						kernelStart = kernelPosition
+					elif i == endRow - 1:
+						kernelEnd = kernelPosition + 1
 
-						weightedSum += ref[refRow][refCol][color] * kernel[kernelRow][kernelCol]
-						n += 1
+					# print("i:" + str(i) + " kp:" + str(kernelPosition))
 
-				weightedAve = weightedSum / n / probSum
+					weightedSum += kernel[kernelPosition] * ref[i][col][color]
 
-				if weightedAve > 255:
-					print("ERROR: " + str(weightedAve))
-					sys.exit()
+				# if weightedSum > 255:
+				# 	print(weightedSum)
+				# 	print(weightedSum > 255)
+				# 	sys.exit()
+
+				# This step is applied to ensure that all components of the weighted average
+				# sum to 1, otherwise the Gaussian blur would darken the image.
+				weightedAve = weightedSum / sum(kernel[kernelStart:kernelEnd])
+
+				# if weightedAve > 255.1:
+				# 	print(weightedAve)
+				# 	print(round(weightedAve))
+				# 	input()
 
 				pixelData[row][col][color] = round(weightedAve)
 
+	# Make sure reference material is updated with the first pass
+	ref = copy.deepcopy(pixelData)
+
+	# Apply horizontal pass
+	for row in range(len(pixelData)):
+		for col in range(len(pixelData[row])):
+			for color in range(len(pixelData[row][col])):
+
+				# Iterate from -3 sigma to + 3 sigma (min 0, max rowBound)
+				startCol = col - 3*sigma if col - 3*sigma > 0 else 0
+				endCol = col + 3*sigma + 1 if col + 3*sigma + 1 < colBound else colBound
+
+				weightedSum = 0
+				
+				# To be defined in the loop, for calculating a normalization divisor
+				kernelStart = None
+				kernelEnd = None
+
+				for i in range(startCol,endCol):
+					# To obtain the right Gaussian Probability Density
+					kernelPosition = 3 * sigma - (col - i)
+
+					if i == startCol:
+						kernelStart = kernelPosition
+					elif i == endCol - 1:
+						kernelEnd = kernelPosition + 1
+
+					weightedSum += kernel[kernelPosition] * ref[row][i][color]
 
 
 
+				# This step is applied to ensure that all components of the weighted average
+				# sum to 1, otherwise the Gaussian blur would darken the image.
+				weightedAve = weightedSum / sum(kernel[kernelStart:kernelEnd])
 
+				# if weightedAve > 255.1:
+				# 	print(weightedAve)
+				# 	print(round(weightedAve))
+				# 	input()
 
+				pixelData[row][col][color] = round(weightedAve)
 
 def printBMP(outputFilename):
 
