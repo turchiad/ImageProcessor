@@ -688,6 +688,137 @@ def gaussianBlur(sigma):
 
 				pixelData[row][col][color] = round(weightedAve)
 
+## The purpose of this method is to sharpen the image by generating a Gaussian blur of the
+## image and subtracting it from the original image. The result is an image which is more
+## sharpened toward edges and details.
+##
+## The input 'thresh' is a threshold difference below which subtractions will be ignored.
+
+def sharpen(thresh):
+
+	# Begin by generating a blur of the image.
+
+	global pixelData
+
+	blurData = copy.deepcopy(pixelData)
+
+	sigma = 10
+
+	# Check if pixelData is loaded
+	isImageLoaded()
+
+	# Define the Gaussian Function
+
+	def G(mu, sigma, x):
+		return 1 / (sigma * (2 * math.pi) ** 0.5) * math.exp(-0.5 * ((x - mu) / sigma) ** 2)
+
+	# Generate the Kernel(can be used for X & Y)
+	kernel = []
+
+	for i in range(6 * sigma + 1):
+		kernel.append(G(3 * sigma, sigma, i))
+
+	# We must create a reference array so we don't pull from blurred values
+	ref = copy.deepcopy(blurData)
+
+	# Get upper boundaries of image dimensions for edge cases
+	rowBound = len(ref)
+	colBound = len(ref[0])
+
+	# print(kernel)
+
+	# Apply vertical pass
+	for row in range(len(blurData)):
+		for col in range(len(blurData[row])):
+			for color in range(len(blurData[row][col])):
+
+				# Iterate from -3 sigma to + 3 sigma (min 0, max rowBound)
+				startRow = row - 3*sigma if row - 3*sigma > 0 else 0
+				endRow = row + 3*sigma + 1 if row + 3*sigma + 1 < rowBound else rowBound
+
+				weightedSum = 0
+				
+				# To be defined in the loop, for calculating a normalization divisor
+				kernelStart = None
+				kernelEnd = None
+
+				for i in range(startRow,endRow):
+					# To obtain the right Gaussian Probability Density
+					kernelPosition = 3 * sigma - (row - i)
+
+					if i == startRow:
+						kernelStart = kernelPosition
+					elif i == endRow - 1:
+						kernelEnd = kernelPosition + 1
+
+					# print("i:" + str(i) + " kp:" + str(kernelPosition))
+
+					weightedSum += kernel[kernelPosition] * ref[i][col][color]
+
+				# This step is applied to ensure that all components of the weighted average
+				# sum to 1, otherwise the Gaussian blur would darken the image.
+				weightedAve = weightedSum / sum(kernel[kernelStart:kernelEnd])
+
+				blurData[row][col][color] = round(weightedAve)
+
+	# Make sure reference material is updated with the first pass
+	ref = copy.deepcopy(blurData)
+
+	# Apply horizontal pass
+	for row in range(len(blurData)):
+		for col in range(len(blurData[row])):
+			for color in range(len(blurData[row][col])):
+
+				# Iterate from -3 sigma to + 3 sigma (min 0, max rowBound)
+				startCol = col - 3*sigma if col - 3*sigma > 0 else 0
+				endCol = col + 3*sigma + 1 if col + 3*sigma + 1 < colBound else colBound
+
+				weightedSum = 0
+				
+				# To be defined in the loop, for calculating a normalization divisor
+				kernelStart = None
+				kernelEnd = None
+
+				for i in range(startCol,endCol):
+					# To obtain the right Gaussian Probability Density
+					kernelPosition = 3 * sigma - (col - i)
+
+					if i == startCol:
+						kernelStart = kernelPosition
+					elif i == endCol - 1:
+						kernelEnd = kernelPosition + 1
+
+					weightedSum += kernel[kernelPosition] * ref[row][i][color]
+
+				# This step is applied to ensure that all components of the weighted average
+				# sum to 1, otherwise the Gaussian blur would darken the image.
+				weightedAve = weightedSum / sum(kernel[kernelStart:kernelEnd])
+
+				blurData[row][col][color] = round(weightedAve)
+
+	# Define inversion
+	def invert(i):
+		return int(255 - i)
+
+	# Define scale
+	scale = 0.5
+
+	# Apply inversion & scale
+	for row in range(len(blurData)):
+		for col in range(len(blurData[row])):
+			for color in range(len(blurData[row][col])):
+				blurData[row][col][color] = int(scale * invert(blurData[row][col][color]))
+				#if blurData[row][col][color] - 10 > 0:
+				#	blurData[row][col][color] = int(blurData[row][col][color] - 100)
+
+	# Apply subtraction
+	for row in range(len(pixelData)):
+		for col in range(len(pixelData[row])):
+			for color in range(len(pixelData[row][col])):
+				diff = pixelData[row][col][color] - blurData[row][col][color]
+				if diff > thresh and diff >= 0:
+					pixelData[row][col][color] = diff
+
 def printBMP(outputFilename):
 
 	# Check if this file is a bitmap image
@@ -796,6 +927,36 @@ for modTag in modTags:
 	modType = modTag[modTag.index("=")+1:].lower()
 
 	# Handling modifier indicator by type
+
+	# Sharpen
+
+	if modType.startswith("s"):
+
+		modTypeIndicator = "s"
+
+		# Check that the box blur modifier has an argument:
+		modTypeArgs = modType[len(modTypeIndicator):]
+
+		modTypeTest1 = modTypeArgs.startswith("[")
+		modTypeTest2 = modTypeArgs.endswith("]")
+		modTypeTest3 = modTypeArgs[1:-1].isdecimal()
+
+		if not (modTypeTest1 and modTypeTest2 and modTypeTest3):
+			sys.stderr.write("-m modifier s has not been configured properly. See -? for help.\n")
+			sys.exit()
+
+		# Handle arguments
+		
+		# Cast brightness intensity to int
+		arg = None
+		try:
+			arg = int(modTypeArgs[1:-1])
+		except:
+			sys.stderr.write("Unexpected error. Non-decimal arguments have been provided to modifier option. Configuration precheck failed. Aborting. \n")
+			sys.exit()
+
+		# If nothing has failed so far:
+		sharpen(arg)
 
 	# Gaussian Blur
 
