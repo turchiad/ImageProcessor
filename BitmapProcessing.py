@@ -338,66 +338,75 @@ def readBMP(inputFilename):
 
 def printBMPHeader():
 
+	#We will use pythons' ''.join(), which is an order of complexity faster than concatenating
+	stringList = []
+
 	# 2 bytes
-	b = fileType.to_bytes(2,'little')
+	stringList.append(fileType.to_bytes(2,'little'))
 
 	# 6 bytes
-	b += fileSize.to_bytes(4,'little')
+	stringList.append(fileSize.to_bytes(4,'little'))
 
 	# 8 bytes
-	b += res1.to_bytes(2,'little')
+	stringList.append(res1.to_bytes(2,'little'))
 
 	# 10 bytes
-	b += res2.to_bytes(2,'little')
+	stringList.append(res2.to_bytes(2,'little'))
 
 	# 14 bytes
-	b += pixelDataOffset.to_bytes(4,'little')
+	stringList.append(pixelDataOffset.to_bytes(4,'little'))
+
+	b = b''.join(stringList)
 
 	return b
 
 
 def printDIBHeader():
 
+	#We will use pythons' ''.join(), which is an order of complexity faster than concatenating
+	stringList = []
+
 	# 4 bytes
-	b = headerSize.to_bytes(4,'little')
+	stringList.append(headerSize.to_bytes(4,'little'))
 
 	# 8 bytes
-	b += imageWidth.to_bytes(4,'little')
+	stringList.append(imageWidth.to_bytes(4,'little'))
 
 	# 12 bytes
-	b += imageHeight.to_bytes(4,'little')
+	stringList.append(imageHeight.to_bytes(4,'little'))
 
 	# 14 bytes
-	b += colorPlanes.to_bytes(2,'little')
+	stringList.append(colorPlanes.to_bytes(2,'little'))
 
 	# 16 bytes
-	b += bitsPerPixel.to_bytes(2,'little')
+	stringList.append(bitsPerPixel.to_bytes(2,'little'))
 
 	# 20 bytes
-	b += compression.to_bytes(4,'little')
+	stringList.append(compression.to_bytes(4,'little'))
 
 	# 24 bytes
-	b += imageSize.to_bytes(4,'little')
+	stringList.append(imageSize.to_bytes(4,'little'))
 
 	# 28 bytes
-	b += xPixelsPerMeter.to_bytes(4,'little')
+	stringList.append(xPixelsPerMeter.to_bytes(4,'little'))
 
 	# 32 bytes
-	b += yPixelsPerMeter.to_bytes(4,'little')
+	stringList.append(yPixelsPerMeter.to_bytes(4,'little'))
 
 	# 36 bytes
-	b += totalColors.to_bytes(4,'little')
+	stringList.append(totalColors.to_bytes(4,'little'))
 
 	# 36 bytes
-	b += importantColors.to_bytes(4,'little')
+	stringList.append(importantColors.to_bytes(4,'little'))
+
+	b = b''.join(stringList)
 
 	return b
 
 def printBMPContent():
 
-	# Initialize empty bytes object
-
-	b = b''
+	#We will use pythons' ''.join(), which is an order of complexity faster than concatenating
+	stringList = []
 
 	count = 0
 
@@ -407,7 +416,9 @@ def printBMPContent():
 			if count % 100 == 0:
 				print("Progress: " + "{:.2f}".format(count / (imageWidth*imageHeight)*100))
 			for i in col:
-				b += i.to_bytes(1,'little')
+				stringList.append(i.to_bytes(1,'little'))
+
+	b = b''.join(stringList)
 
 	return b
 
@@ -589,7 +600,7 @@ def gaussianBlur(sigma):
 	rowBound = len(ref)
 	colBound = len(ref[0])
 
-	print(kernel)
+	# print(kernel)
 
 	# Apply vertical pass
 	for row in range(len(pixelData)):
@@ -692,14 +703,14 @@ def printBMP(outputFilename):
 		sys.stderr.write("Error when opening file to write to. Aborting.\n")
 		sys.exit()
 
-	# Initialize the byte string we will be constructing to print to the output file.
+	stringList = []
 
-	outputBytes = b''
-
-	outputBytes += printBMPHeader()
-	outputBytes += printDIBHeader()
+	stringList.append(printBMPHeader())
+	stringList.append(printDIBHeader())
 	# outputBytes += printColorPallet()
-	outputBytes += printBMPContent()
+	stringList.append(printBMPContent())
+
+	outputBytes = b''.join(stringList)
 
 	# Print to output file
 	f.write(outputBytes)
