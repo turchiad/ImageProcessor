@@ -700,7 +700,7 @@ def sharpen(thresh):
 
 	global pixelData
 
-	blurData = copy.deepcopy(pixelData)
+	coarseData = copy.deepcopy(pixelData)
 
 	sigma = 10
 
@@ -719,7 +719,7 @@ def sharpen(thresh):
 		kernel.append(G(3 * sigma, sigma, i))
 
 	# We must create a reference array so we don't pull from blurred values
-	ref = copy.deepcopy(blurData)
+	ref = copy.deepcopy(coarseData)
 
 	# Get upper boundaries of image dimensions for edge cases
 	rowBound = len(ref)
@@ -728,9 +728,9 @@ def sharpen(thresh):
 	# print(kernel)
 
 	# Apply vertical pass
-	for row in range(len(blurData)):
-		for col in range(len(blurData[row])):
-			for color in range(len(blurData[row][col])):
+	for row in range(len(coarseData)):
+		for col in range(len(coarseData[row])):
+			for color in range(len(coarseData[row][col])):
 
 				# Iterate from -3 sigma to + 3 sigma (min 0, max rowBound)
 				startRow = row - 3*sigma if row - 3*sigma > 0 else 0
@@ -759,15 +759,15 @@ def sharpen(thresh):
 				# sum to 1, otherwise the Gaussian blur would darken the image.
 				weightedAve = weightedSum / sum(kernel[kernelStart:kernelEnd])
 
-				blurData[row][col][color] = round(weightedAve)
+				coarseData[row][col][color] = round(weightedAve)
 
 	# Make sure reference material is updated with the first pass
-	ref = copy.deepcopy(blurData)
+	ref = copy.deepcopy(coarseData)
 
 	# Apply horizontal pass
-	for row in range(len(blurData)):
-		for col in range(len(blurData[row])):
-			for color in range(len(blurData[row][col])):
+	for row in range(len(coarseData)):
+		for col in range(len(coarseData[row])):
+			for color in range(len(coarseData[row][col])):
 
 				# Iterate from -3 sigma to + 3 sigma (min 0, max rowBound)
 				startCol = col - 3*sigma if col - 3*sigma > 0 else 0
@@ -794,30 +794,31 @@ def sharpen(thresh):
 				# sum to 1, otherwise the Gaussian blur would darken the image.
 				weightedAve = weightedSum / sum(kernel[kernelStart:kernelEnd])
 
-				blurData[row][col][color] = round(weightedAve)
+				coarseData[row][col][color] = round(weightedAve)
 
-	# Define inversion
-	def invert(i):
-		return int(255 - i)
+
+	# Define the fine (the subtraction of the coarseData from the pixelData)
+	fineData = copy.deepcopy(pixelData)
+
+	# Generate the fine
+	for row in range(len(fineData)):
+		for col in range(len(fineData[row])):
+			for color in range(len(fineData[row][col])):
+				diff = int(fineData[row][col][color] - coarseData[row][col][color])
+				if diff < thresh:
+					diff = 0
+				else:
+					fineData[row][col][color] = 255 if diff > 255 else 0 if diff < 0 else diff
 
 	# Define scale
 	scale = 0.5
 
-	# Apply inversion & scale
-	for row in range(len(blurData)):
-		for col in range(len(blurData[row])):
-			for color in range(len(blurData[row][col])):
-				blurData[row][col][color] = int(scale * invert(blurData[row][col][color]))
-				#if blurData[row][col][color] - 10 > 0:
-				#	blurData[row][col][color] = int(blurData[row][col][color] - 100)
-
-	# Apply subtraction
+	# Apply overlay of fine against 
 	for row in range(len(pixelData)):
 		for col in range(len(pixelData[row])):
 			for color in range(len(pixelData[row][col])):
-				diff = pixelData[row][col][color] - blurData[row][col][color]
-				if diff > thresh and diff >= 0:
-					pixelData[row][col][color] = diff
+				overlay = int(pixelData[row][col][color] + fineData[row][col][color] * scale)
+				pixelData[row][col][color] = 255 if overlay > 255 else 0 if overlay < 0 else overlay
 
 def printBMP(outputFilename):
 
